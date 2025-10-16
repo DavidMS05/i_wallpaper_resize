@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extensor de Wallpapers para iPhone</title>
+    <link rel="stylesheet" href="/Proyectos_Personales/Wallpaper_app/css/index.css"> 
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Extensor de Wallpapers para iPhone</h1>
+        </header>
+
+        <div class="app-container">
+            <section class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <h2>📷</h2>
+                    <h3>Arrastra tu imagen aquí</h3>
+                    <p>o haz clic para seleccionar</p>
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="extendTop">Extender parte superior (px)</label>
+                        <input type="range" id="extendTop" min="0" max="400" value="0">
+                    </div>
+
+                    <div class="control-group">
+                        <label for="customColor">Color personalizado</label>
+                        <div class="color-picker-container">
+                            <input type="color" id="customColor" class="color-picker" value="#3498db">
+                            <span id="colorHex">#3498db</span>
+                            <button id="colorPickerBtn" class="color-picker" title="Seleccionar Color">
+                                
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instructions">
+                    <h3>Instrucciones:</h3>
+                    <ul>
+                        <li>Sube una imagen que quieras usar como wallpaper</li>
+                        <li>Elige el color de relleno para las áreas extendidas</li>
+                        <li>Descarga tu wallpaper adaptado al iPhone</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="preview-section">
+                <div class="preview-container">
+                    <div class="iphone-frame">
+                        <div class="iphone-screen">
+                            <canvas id="previewCanvas"></canvas>
+                            <div class="lock-screen-overlay">
+                                <div class="clock" id="clockDisplay">10:09</div>
+                                <div class="date" id="dateDisplay">lunes 1 de enero</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="download-btn" id="downloadBtn">Descargar Wallpaper</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const uploadArea = document.getElementById('uploadArea');
+            const imageInput = document.getElementById('imageInput');
+            const previewCanvas = document.getElementById('previewCanvas');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const extendTop = document.getElementById('extendTop');
+            const customColor = document.getElementById('customColor');
+            const colorHex = document.getElementById('colorHex');
+            const clockDisplay = document.getElementById('clockDisplay');
+            const dateDisplay = document.getElementById('dateDisplay');
+            
+
+            const ctx = previewCanvas.getContext('2d');
+            let originalImage = null;
+
+            function updateClock() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                clockDisplay.textContent = `${hours}:${minutes}`;
+
+                const options = { weekday: 'long', day: 'numeric', month: 'long' };
+                dateDisplay.textContent = now.toLocaleDateString('es-ES', options);
+            }
+
+            updateClock();
+            setInterval(updateClock, 60000);
+
+            function setupCanvas() {
+                previewCanvas.width = 240;
+                previewCanvas.height = 520;
+            }
+
+            uploadArea.addEventListener('click', () => imageInput.click());
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#007AFF';
+                uploadArea.style.background = 'rgba(0, 122, 255, 0.1)';
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.borderColor = '#3A3A3C';
+                uploadArea.style.background = '';
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#3A3A3C';
+                uploadArea.style.background = '';
+
+                if (e.dataTransfer.files.length) {
+                    loadImage(e.dataTransfer.files[0]);
+                }
+            });
+
+            imageInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    loadImage(e.target.files[0]);
+                }
+            });
+
+            function loadImage(file) {
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        originalImage = img;
+                        applyEffects();
+                    };
+                    img.src = e.target.result;
+                };
+
+                reader.readAsDataURL(file);
+            }
+            function applyEffects() {
+                if (!originalImage) return;
+
+                setupCanvas();
+
+                const canvasWidth = previewCanvas.width;
+                const canvasHeight = previewCanvas.height;
+
+                const scaleFactor = canvasWidth / originalImage.width;
+                
+                const imgDisplayWidth = originalImage.width * scaleFactor;
+                const imgDisplayHeight = originalImage.height * scaleFactor;
+
+                const extensionTopPixels = parseInt(extendTop.value, 10);
+
+                const imgOffsetY = canvasHeight - imgDisplayHeight; 
+
+                ctx.fillStyle = customColor.value;
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                ctx.drawImage(originalImage, 0, 0, originalImage.width, originalImage.height,
+                    0, imgOffsetY, imgDisplayWidth, imgDisplayHeight);
+            }
+            extendTop.addEventListener('input', applyEffects);
+
+            customColor.addEventListener('input', function () {
+                colorHex.textContent = this.value;
+                applyEffects();
+            });
+            downloadBtn.addEventListener('click', function () {
+                if (!originalImage) {
+                    alert('Por favor, sube una imagen primero.');
+                    return;
+                }
+
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+              
+                const targetWidth = 1125;
+                const targetHeight = 2436; 
+                
+                const extensionTopPixels = parseInt(extendTop.value, 10);
+
+              
+                tempCanvas.width = targetWidth; 
+                tempCanvas.height = targetHeight + extensionTopPixels;
+
+               
+                const scaleFactor = targetWidth / originalImage.width;
+                
+                const imgCanvasWidth = targetWidth;
+                const imgCanvasHeight = originalImage.height * scaleFactor;
+                
+               
+                const imgOffsetY = tempCanvas.height - imgCanvasHeight;
+
+                
+                tempCtx.fillStyle = customColor.value;
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                
+                tempCtx.drawImage(originalImage, 0, 0, originalImage.width, originalImage.height,
+                    0, imgOffsetY, imgCanvasWidth, imgCanvasHeight);
+
+                const link = document.createElement('a');
+                const randomId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+                link.download = `iphone-wallpaper-${randomId}.png`;
+                link.href = tempCanvas.toDataURL('image/png');
+                link.click();
+            });
+            setupCanvas();
+            ctx.fillStyle = '#1C1C1E';
+            ctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+        });
+    </script>
+</body>
+
+</html>
